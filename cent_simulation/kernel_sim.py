@@ -41,9 +41,11 @@ if __name__ == "__main__":
       "ffn": torch.zeros((1, 1, dim))
   }
 
-  M=512
-  K=512
-  N=512
+  D=512
+
+  M=D
+  K=D
+  N=D
 
   # create a TransformerBlock which provides AiM Instruction Generation Functions
   TB = TransformerBlockLlama(dic_model, args)
