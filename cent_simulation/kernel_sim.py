@@ -1,4 +1,4 @@
-from TransformerBlock import TransformerBlock
+from Llama import TransformerBlockLlama
 import torch
 from utils import get_args, compare
 import sys
@@ -44,12 +44,19 @@ if __name__ == "__main__":
   M=512
   K=512
   N=512
+
   # create a TransformerBlock which provides AiM Instruction Generation Functions
-  TB = TransformerBlock(dic_model, args)
+  TB = TransformerBlockLlama(dic_model, args)
+  TB.memory_mapping()
+
+  channel_lst = [0]
+  row_idx = getattr(TB, "wq_row_index", 0)
+  total_banks = getattr(TB, "FC_total_banks", TB.total_banks if hasattr(TB, "total_banks") else 1)
+
   vector = torch.arange(M, dtype=torch.float16)                     # shape (16,)
   matrix = torch.arange(K*N, dtype=torch.float16).reshape(K, N)  # shape (16,16)
-  result = TB.Vector_Matrix_Mul(vector, matrix)
-  print("VM result:", result)
+  TB.Vector_Matrix_Mul_weight_pim_only_trace(channel_lst, row_idx, M, N, total_banks, "breakdown_ffn_weight")
+#   print("VM result:", result)
   TB.finish()
   TB.file.close()
   sys.exit(0)
