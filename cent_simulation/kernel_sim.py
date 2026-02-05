@@ -2,6 +2,7 @@ from Llama import TransformerBlockLlama
 import torch
 from utils import get_args, compare
 import sys
+import os
 
 if __name__ == "__main__":
   args = get_args()
@@ -41,6 +42,9 @@ if __name__ == "__main__":
       "ffn": torch.zeros((1, 1, dim))
   }
 
+  kernel_name = "gemv_{M}x{K}x{N}"
+  outdir = f"./traces/"
+  os.makedirs(outdir, exist_ok=True)
   # Create matrix and vector
   D=512
 
@@ -53,6 +57,9 @@ if __name__ == "__main__":
 
   # create a TransformerBlock which provides AiM Instruction Generation Functions
   TB = TransformerBlockLlama(dic_model, args)
+  TB.trace_file = f'{outdir}/{kernel_name.format(M=M,K=K,N=N)}.trace'
+  TB.file = open(TB.trace_file, 'w')
+
   TB.memory_mapping()
   # TB.memory_mapping_verification()
 
