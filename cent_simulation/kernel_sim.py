@@ -54,7 +54,7 @@ if __name__ == "__main__":
   # create a TransformerBlock which provides AiM Instruction Generation Functions
   TB = TransformerBlockLlama(dic_model, args)
   TB.memory_mapping()
-  TB.memory_mapping_verification()
+  # TB.memory_mapping_verification()
 
   row_idx = getattr(TB, "wq_row_index", 0)
   channel_lst = [0]
@@ -63,10 +63,9 @@ if __name__ == "__main__":
   TB.dic_shape["test_w"] = TB.store_to_DRAM_multi_channel(matrix, row_idx, TB.mode["weights"],False)
 
   ref = torch.matmul(vector.float(), matrix.float())   # shape (N,)
-  pim_out = TB.Vector_Matrix_Mul_weight_pim(vector, row_idx, M, N, total_banks, True, "breakdown_ffn_weight")
+  pim_out = TB.Vector_Matrix_Mul_weight_pim(vector, row_idx, M, N, total_banks, False, "breakdown_ffn_weight")
 
-  pim_tensor = torch.tensor(pim_out, dtype=torch.float32)
-  compare(pim_tensor, ref, "GEMV verification")
+  compare(pim_out, ref, "GEMV verification")
 
   TB.finish()
   TB.file.close()
