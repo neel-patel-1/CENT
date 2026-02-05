@@ -60,10 +60,8 @@ if __name__ == "__main__":
   channel_lst = [0]
   total_banks = getattr(TB, "FC_total_banks", TB.total_banks if hasattr(TB, "total_banks") else 1)
 
-  TB.dic_shape["test_w"] = TB.store_to_DRAM_multi_channel(matrix, row_idx, TB.mode["weights"],False)
-
   ref = torch.matmul(vector.float(), matrix.float())   # shape (N,)
-  pim_out = TB.Vector_Matrix_Mul_weight_pim(vector, row_idx, M, N, total_banks, False, "breakdown_ffn_weight")
+  pim_out = TB.Vector_Matrix_Mul_weight_pim(vector, row_idx, M, N, total_banks, True, "breakdown_ffn_weight")
 
   compare(pim_out, ref, "GEMV verification")
 
