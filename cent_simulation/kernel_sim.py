@@ -50,6 +50,8 @@ if __name__ == "__main__":
   # create a TransformerBlock which provides AiM Instruction Generation Functions
   TB = TransformerBlockLlama(dic_model, args)
   TB.memory_mapping()
+  TB.memory_mapping_verification()
+
 
   channel_lst = [0]
   row_idx = getattr(TB, "wq_row_index", 0)
@@ -57,8 +59,7 @@ if __name__ == "__main__":
 
   vector = torch.arange(M, dtype=torch.float16)                     # shape (16,)
   matrix = torch.arange(K*N, dtype=torch.float16).reshape(K, N)  # shape (16,16)
-  TB.Vector_Matrix_Mul_weight_pim_only_trace(channel_lst, row_idx, M, N, total_banks, "breakdown_ffn_weight")
-#   print("VM result:", result)
+  TB.Vector_Matrix_Mul_weight_pim(vector, row_idx, M, N, total_banks, True, "breakdown_ffn_weight")
   TB.finish()
   TB.file.close()
   sys.exit(0)
