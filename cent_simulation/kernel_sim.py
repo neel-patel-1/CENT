@@ -41,25 +41,33 @@ if __name__ == "__main__":
       "ffn": torch.zeros((1, 1, dim))
   }
 
+  # Create matrix and vector
   D=512
 
   M=D
   K=D
   N=D
 
+  vector = torch.arange(M, dtype=torch.float16)                     # shape (16,)
+  matrix = torch.arange(K*N, dtype=torch.float16).reshape(K, N)  # shape (16,16)
+
   # create a TransformerBlock which provides AiM Instruction Generation Functions
   TB = TransformerBlockLlama(dic_model, args)
   TB.memory_mapping()
   TB.memory_mapping_verification()
 
-
-  channel_lst = [0]
   row_idx = getattr(TB, "wq_row_index", 0)
+  channel_lst = [0]
   total_banks = getattr(TB, "FC_total_banks", TB.total_banks if hasattr(TB, "total_banks") else 1)
 
-  vector = torch.arange(M, dtype=torch.float16)                     # shape (16,)
-  matrix = torch.arange(K*N, dtype=torch.float16).reshape(K, N)  # shape (16,16)
-  TB.Vector_Matrix_Mul_weight_pim(vector, row_idx, M, N, total_banks, True, "breakdown_ffn_weight")
+  TB.dic_shape["test_w"] = TB.store_to_DRAM_multi_channel(matrix, row_idx, TB.mode["weights"],False)
+
+  ref = torch.matmul(vector.float(), matrix.float())   # shape (N,)
+  pim_out = TB.Vector_Matrix_Mul_weight_pim(vector, row_idx, M, N, total_banks, True, "breakdown_ffn_weight")
+
+  pim_tensor = torch.tensor(pim_out, dtype=torch.float32)
+  compare(pim_tensor, ref, "GEMV verification")
+
   TB.finish()
   TB.file.close()
   sys.exit(0)
