@@ -3,6 +3,7 @@ import torch
 from utils import get_args, compare
 import sys
 import os
+import subprocess
 
 if __name__ == "__main__":
   args = get_args()
@@ -69,9 +70,12 @@ if __name__ == "__main__":
 
   ref = torch.matmul(vector.float(), matrix.float())   # shape (N,)
   pim_out = TB.Vector_Matrix_Mul_weight_pim(vector, row_idx, M, N, total_banks, True, "breakdown_ffn_weight")
+  TB.finish()
+  TB.file.close()
 
   compare(pim_out, ref, "GEMV verification")
 
-  TB.finish()
-  TB.file.close()
-  sys.exit(0)
+  command=f"../aim_simulator/build/ramulator2 -f ../aim_simulator/test/example.yaml -t {TB.trace_file}"
+  log_file = f"./traces/{kernel_name.format(M=M,K=K,N=N)}.log"
+  with open(log_file, "w") as lf:
+    subprocess.run(command, shell=True, stdout=lf, stderr=lf, text=True)
