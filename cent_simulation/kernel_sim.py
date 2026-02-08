@@ -3,79 +3,9 @@ import torch
 from utils import get_args, compare
 import sys
 import os
+from kernels.gemv import gemv
 import subprocess
 
 if __name__ == "__main__":
-  args = get_args()
-
-  # Model params to pass to transformer block, just use default from function_sim.py
-  head_dim = 128
-  dim = head_dim * args.n_heads
-  ffn_dim = args.ffn_dim
-  TP_param = 8 if args.GPT3_175B_TP_8 else 1
-  n_heads = args.n_heads // TP_param
-  n_kv_heads = args.n_kv_heads if args.Llama_GQA else n_heads
-  dic_model = {
-      "TP_param": torch.tensor(TP_param),
-      "dim": torch.tensor(dim),
-      "n_heads": torch.tensor(n_heads),
-      "x": torch.zeros((1, 1, dim)),
-      "SANorm": torch.zeros(dim),
-      "FFNNorm": torch.zeros(dim),
-      "sa": torch.zeros((1, 1, dim)),
-      "h": torch.zeros((1, 1, dim)),
-      "out": torch.zeros((1, 1, dim)),
-      "wq": torch.zeros((dim // TP_param, dim)),
-      "wk": torch.zeros((head_dim * n_kv_heads), dim),
-      "wv": torch.zeros((head_dim * n_kv_heads), dim),
-      "xq": torch.zeros((1, 1, dim)),
-      "xk": torch.zeros((1, 1, head_dim * n_heads)),
-      "xv": torch.zeros((1, 1, head_dim * n_heads)),
-      "start_pos": torch.tensor(args.seqlen - 1),
-      "cache_k": torch.zeros((1, args.seqlen, n_kv_heads, head_dim)),
-      "cache_v": torch.zeros((1, args.seqlen, n_kv_heads, head_dim)),
-      "scores": torch.zeros((1, n_heads, 1, args.seqlen)),
-      "output": torch.zeros((1, 1, dim)),
-      "wo": torch.zeros((dim // TP_param, dim)),
-      "w1": torch.zeros((ffn_dim // TP_param, dim)),
-      "w3": torch.zeros((ffn_dim // TP_param, dim)),
-      "w2": torch.zeros((dim // TP_param, ffn_dim)),
-      "ffn": torch.zeros((1, 1, dim))
-  }
-
-  kernel_name = "gemv_{M}x{K}x{N}"
-  outdir = f"./traces/"
-  os.makedirs(outdir, exist_ok=True)
-  # Create matrix and vector
-  D=512
-
-  M=D
-  K=D
-  N=D
-
-  vector = torch.arange(M, dtype=torch.float16)                     # shape (16,)
-  matrix = torch.arange(K*N, dtype=torch.float16).reshape(K, N)  # shape (16,16)
-
-  # create a TransformerBlock which provides AiM Instruction Generation Functions
-  TB = TransformerBlockLlama(dic_model, args)
-  TB.trace_file = f'{outdir}/{kernel_name.format(M=M,K=K,N=N)}.trace'
-  TB.file = open(TB.trace_file, 'w')
-
-  TB.memory_mapping()
-  # TB.memory_mapping_verification()
-
-  row_idx = getattr(TB, "wq_row_index", 0)
-  channel_lst = [0]
-  total_banks = getattr(TB, "FC_total_banks", TB.total_banks if hasattr(TB, "total_banks") else 1)
-
-  ref = torch.matmul(vector.float(), matrix.float())   # shape (N,)
-  pim_out = TB.Vector_Matrix_Mul_weight_pim(vector, row_idx, M, N, total_banks, True, "breakdown_ffn_weight")
-  TB.finish()
-  TB.file.close()
-
-  compare(pim_out, ref, "GEMV verification")
-
-  command=f"../aim_simulator/build/ramulator2 -f ../aim_simulator/test/example.yaml -t {TB.trace_file}"
-  log_file = f"./traces/{kernel_name.format(M=M,K=K,N=N)}.log"
-  with open(log_file, "w") as lf:
-    subprocess.run(command, shell=True, stdout=lf, stderr=lf, text=True)
+  # GemV
+  gemv()

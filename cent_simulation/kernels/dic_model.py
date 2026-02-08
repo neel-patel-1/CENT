@@ -1,5 +1,4 @@
 import torch
-from Llama import TransformerBlockLlama
 from utils import get_args
 
 def create_dic_model(args=None):
@@ -22,8 +21,8 @@ def create_dic_model(args=None):
       "h": torch.zeros((1, 1, dim)),
       "out": torch.zeros((1, 1, dim)),
       "wq": torch.zeros((dim // TP_param, dim)),
-      "wk": torch.zeros((head_dim * n_kv_heads), dim),
-      "wv": torch.zeros((head_dim * n_kv_heads), dim),
+      "wk": torch.zeros((head_dim * n_kv_heads, dim)),
+      "wv": torch.zeros((head_dim * n_kv_heads, dim)),
       "xq": torch.zeros((1, 1, dim)),
       "xk": torch.zeros((1, 1, head_dim * n_heads)),
       "xv": torch.zeros((1, 1, head_dim * n_heads)),
@@ -38,3 +37,7 @@ def create_dic_model(args=None):
       "w2": torch.zeros((dim // TP_param, ffn_dim)),
       "ffn": torch.zeros((1, 1, dim))
   }
+  if args.Llama_GQA:
+    dic_model["n_kv_heads"] = torch.tensor(n_kv_heads)
+
+  return dic_model

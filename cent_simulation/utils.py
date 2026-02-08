@@ -16,6 +16,7 @@ model_parallel_mode_list = ["model_parallel", "model_parallel_embedding", "model
 
 def get_args():
     parser = argparse.ArgumentParser('Process model parameters.')
+    parser.add_argument("--kernel", choices=["GEMV", "RMSNorm"], help="kernel to simulate and generate trace for")
     parser.add_argument("--filename", help="Name of weight file")
     parser.add_argument("--model", choices=["llama-2-7b", "llama-2-13b", "llama-2-70b", "bloom"], help="model choice")
     parser.add_argument("--GEMV", choices=["reuse-GB", "reuse-bank", "no-reuse"], help="GEMV choice, inner product keeps accumulation results and re-write GB, outer product keeps GB and re-write accumulation register.", default="no-reuse")
@@ -132,9 +133,9 @@ def compare(a, b, name):
         else:
             compare_1d(a, b, name)
         print()
-    
 
-        
+
+
 
 def reshape_for_broadcast(freqs_cis: torch.Tensor, x: torch.Tensor):
     ndim = x.ndim
@@ -147,7 +148,7 @@ def apply_rotary_emb(xq, xk, freqs_cis):
     """
     Use rotary positional embedding to avoid the tail effects of absolute positional embedding
     starred expression is used to unpack variables
-    xq = torch.Size([1, 1, 32, 128]) 
+    xq = torch.Size([1, 1, 32, 128])
     *xq.reshape = torch.Size([1, 1, 32, 64, 2])   [a, b] in the last dimension
     xq_ = torch.Size([1, 1, 32, 64])              [a + jb] in the last dimension
     freqs_cis = torch.Size([1, 64])
